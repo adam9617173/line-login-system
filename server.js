@@ -94,11 +94,11 @@ app.get('/callback', async (req, res) => {
     const userCard = cards.find(c => c.lineId === userId);
 
     if (userCard) {
-      // 有名片 → 重新導向名片編輯器
-      res.send('<html><head><meta charset="UTF-8"><title>登入成功</title><script>window.location.href="/card-editor";</script></head><body><p>登入成功，跳轉中...</p></body></html>');
+      // 有名片 → 重新導向名片編輯器，並帶上 userId
+      res.send('<html><head><meta charset="UTF-8"><title>登入成功</title><script>window.location.href="/card-editor?userId=' + userId + '";</script></head><body><p>登入成功，跳轉中...</p></body></html>');
     } else {
-      // 沒有名片 → 導向名片編輯器讓他建立
-      res.send('<html><head><meta charset="UTF-8"><title>建立名片</title><script>window.location.href="/card-editor";</script></head><body><p>即將跳轉到名片編輯器...</p></body></html>');
+      // 沒有名片 → 導向名片編輯器讓他建立，並帶上 userId
+      res.send('<html><head><meta charset="UTF-8"><title>建立名片</title><script>window.location.href="/card-editor?userId=' + userId + '";</script></head><body><p>即將跳轉到名片編輯器...</p></body></html>');
     }
   } catch (err) {
     res.send('登入失敗');
@@ -188,12 +188,29 @@ app.post('/api/cards/delete', (req, res) => {
 
 // 儲存 Flex JSON 名片
 app.post('/api/cards/save-flex', (req, res) => {
-  const { flexJson } = req.body;
-  // 從 referer 取得 lineId，或需要登入
-  // 這裡先簡化，儲存到一個共享位置
-  const fs = require('fs');
-  const flexFile = path.join(__dirname, 'latest-flex.json');
-  fs.writeFileSync(flexFile, flexJson);
+  const { lineId, flexJson } = req.body;
+  
+  if (!lineId) {
+    res.json({ success: false, error: '缺少用戶 ID' });
+    return;
+  }
+  
+  const cards = getCards();
+  const index = cards.findIndex(c => c.lineId === lineId);
+  
+  const card = { 
+    lineId: lineId, 
+    flexJson: flexJson,
+    updatedAt: new Date().toISOString()
+  };
+  
+  if (index >= 0) {
+    cards[index] = { ...cards[index], ...card };
+  } else {
+    cards.push(card);
+  }
+  
+  saveCards(cards);
   res.json({ success: true });
 });
 

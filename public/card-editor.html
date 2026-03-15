@@ -380,13 +380,22 @@
       });
     }
     
-    // 儲存名片
+    // 儲存名片 - 使用 URL 中的 userId
     function saveCard() {
       const json = document.getElementById('jsonOutput').value;
+      // 從 URL 取得 userId
+      const urlParams = new URLSearchParams(window.location.search);
+      const userId = urlParams.get('userId');
+      
+      if (!userId) {
+        alert('無法取得用戶資訊，請重新從 LINE 登入');
+        return;
+      }
+      
       fetch('/api/cards/save-flex', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ flexJson: json })
+        body: JSON.stringify({ lineId: userId, flexJson: json })
       }).then(function(res) { return res.json(); })
         .then(function(data) {
           if (data.success) {
@@ -397,8 +406,12 @@
         });
     }
     
-    // 分享給 LINE 好友 - 使用 liff.shareTargetPicker
+    // 分享給 LINE 好友 - 使用 liff.shareTargetPicker + userId
     async function shareToLine() {
+      // 從 URL 取得 userId
+      const urlParams = new URLSearchParams(window.location.search);
+      const userId = urlParams.get('userId');
+      
       // 檢查是否在 LINE 環境
       if (!window.liff) {
         alert('請在 LINE 內開啟此頁面才能使用分享功能');
@@ -406,8 +419,18 @@
       }
       
       try {
-        // 初始化 LIFF（如果還沒初始化）
+        // 初始化 LIFF
         await liff.init({ liffId: '2008927075-RmILZFtb' });
+        
+        // 先儲存名片
+        if (userId) {
+          const json = document.getElementById('jsonOutput').value;
+          await fetch('/api/cards/save-flex', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ lineId: userId, flexJson: json })
+          });
+        }
         
         // 準備 Flex Message
         const flexJson = JSON.parse(document.getElementById('jsonOutput').value);
