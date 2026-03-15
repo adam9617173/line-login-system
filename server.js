@@ -39,15 +39,13 @@ function saveCards(cards) {
   fs.writeFileSync(CARDS_FILE, JSON.stringify(cards, null, 2));
 }
 
-// HTML 跳脫函數
 function escapeHtml(text) {
-  if (!text) return '';
   return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 console.log('Admin path: /' + ADMIN_PATH);
