@@ -106,15 +106,20 @@ app.get('/' + ADMIN_PATH, (req, res) => {
   let html = '<html><head><meta charset="UTF-8"><title>用戶管理</title><style>';
   html += 'body{font-family:sans-serif;background:#f5f5f5;padding:20px;}';
   html += 'h1{color:#1a1a2e;}';
-  html += 'table{width:100%;background:white;border-collapse:collapse;}';
+  html += 'table{width:100%;background:white;border-collapse:collapse;margin-bottom:30px;}';
   html += 'th,td{padding:10px;border:1px solid #ddd;text-align:left;}';
   html += 'th{background:#667eea;color:white;}';
+  html += 'a{text-decoration:none;padding:5px 10px;background:#06C755;color:white;border-radius:4px;}';
+  html += 'a.dis{background:#ff4757;}';
   html += '</style></head><body>';
   html += '<h1>用戶列表 (' + users.length + ')</h1>';
-  html += '<table><tr><th>名稱</th><th>ID</th><th>狀態</th></tr>';
-  
+  html += '<table><tr><th>名稱</th><th>ID</th><th>狀態</th><th>操作</th></tr>';
+
   for (const u of users) {
-    html += '<tr><td>' + u.displayName + '</td><td>' + u.lineId + '</td><td>' + (u.allowed ? '已開通' : '審核中') + '</td></tr>';
+    const action = u.allowed 
+      ? '<a href="/api/users/toggle?lineId=' + u.lineId + '&allowed=false" class="dis">停用</a>'
+      : '<a href="/api/users/toggle?lineId=' + u.lineId + '&allowed=true">開通</a>';
+    html += '<tr><td>' + u.displayName + '</td><td>' + u.lineId + '</td><td>' + (u.allowed ? '已開通' : '審核中') + '</td><td>' + action + '</td></tr>';
   }
   html += '</table>';
   
@@ -127,8 +132,7 @@ app.get('/' + ADMIN_PATH, (req, res) => {
   }
   html += '</table>';
   
-  html += '<h2>操作</h2>';
-  html += '<p><a href="/admin-login">管理員登入</a> | <a href="/">回首頁</a></p>';
+  html += '<p><a href="/">回首頁</a></p>';
   html += '</body></html>';
   
   res.send(html);
@@ -140,6 +144,13 @@ app.get('/admin', (req, res) => {
 
 // API
 app.get('/api/users', (req, res) => res.json(getUsers()));
+app.get('/api/users/toggle', (req, res) => {
+  const { lineId, allowed } = req.query;
+  const users = getUsers();
+  const user = users.find(u => u.lineId === lineId);
+  if (user) { user.allowed = (allowed === 'true'); saveUsers(users); }
+  res.redirect('/' + ADMIN_PATH);
+});
 app.post('/api/users/toggle', (req, res) => {
   const { lineId, allowed } = req.body;
   const users = getUsers();
