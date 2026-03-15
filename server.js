@@ -171,7 +171,15 @@ app.post('/api/users/delete', (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/cards', (req, res) => res.json(getCards()));
+app.get('/api/cards', (req, res) => {
+  const lineId = req.query.lineId;
+  if (lineId) {
+    const cards = getCards().filter(c => c.lineId === lineId);
+    res.json(cards);
+  } else {
+    res.json(getCards());
+  }
+});
 app.post('/api/cards', (req, res) => {
   const { lineId, title, company } = req.body;
   const cards = getCards();
