@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LINE 名片編輯器</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
+    
+    .header { background: linear-gradient(135deg, #06C755, #00B337); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 1.5rem; }
+    .header a { color: white; text-decoration: none; }
+    
+    .container { display: flex; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; }
+    
+    .editor { flex: 1; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .preview { width: 400px; background: #e5e5e5; border-radius: 12px; padding: 20px; position: sticky; top: 20px; }
+    
+    .section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+    .section h3 { margin-bottom: 15px; color: #333; display: flex; justify-content: space-between; align-items: center; }
+    
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+    .btn-primary { background: #06C755; color: white; }
+    .btn-danger { background: #ff4757; color: white; }
+    .btn-secondary { background: #667eea; color: white; }
+    
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 5px; color: #666; font-size: 0.85rem; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+    .form-group input:focus { outline: none; border-color: #06C755; }
+    
+    .item-card { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; position: relative; }
+    .item-card .remove-btn { position: absolute; top: 10px; right: 10px; background: #ff4757; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+    
+    .preview-title { text-align: center; margin-bottom: 15px; color: #333; }
+    
+    /* LINE Card Preview Style */
+    .line-card { background: white; border-radius: 18px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .line-card-header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px; }
+    .line-card-header .motto { font-size: 0.85rem; opacity: 0.9; }
+    
+    .line-card-hero { text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea, #764ba2); }
+    .line-card-hero img { width: 100px; height: 100px; border-radius: 50%; border: 3px solid white; object-fit: cover; }
+    .line-card-hero .name { font-size: 1.3rem; font-weight: bold; color: #1a1a2e; margin-top: 10px; }
+    .line-card-hero .title { font-size: 0.9rem; color: #667eea; margin-top: 5px; }
+    
+    .line-card-body { padding: 15px; }
+    .line-card-body .info-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+    .line-card-body .info-row:last-child { border-bottom: none; }
+    .line-card-body .info-label { color: #999; font-size: 0.8rem; width: 60px; }
+    .line-card-body .info-value { color: #333; font-size: 0.9rem; }
+    
+    .line-card-buttons { padding: 10px 15px; }
+    .line-card-btn { display: block; width: 100%; padding: 12px; margin-bottom: 8px; text-align: center; border-radius: 8px; text-decoration: none; font-size: 0.9rem; }
+    .line-card-btn:last-child { margin-bottom: 0; }
+    .line-card-btn-primary { background: linear-gradient(135deg, #06C755, #00B337); color: white; }
+    .line-card-btn-secondary { background: #f0f0f0; color: #333; }
+    
+    .image-upload { border: 2px dashed #ddd; padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; }
+    .image-upload:hover { border-color: #06C755; }
+    .image-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 10px; }
+    
+    .add-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .add-btn { padding: 8px 12px; background: #f0f0f0; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+    .add-btn:hover { background: #e0e0e0; }
+    
+    .json-output { margin-top: 20px; }
+    .json-output textarea { width: 100%; height: 200px; font-family: monospace; font-size: 0.8rem; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📇 LINE 名片編輯器</h1>
+    <a href="/">回首頁</a>
+  </div>
+  
+  <div class="container">
+    <!-- 編輯器 -->
+    <div class="editor">
+      <!-- 基本資料 -->
+      <div class="section">
+        <h3>👤 基本資料</h3>
+        <div class="form-group">
+          <label>大頭照</label>
+          <input type="text" id="avatarUrl" placeholder="輸入圖片網址" oninput="updatePreview()">
+        </div>
+        <div class="form-group">
+          <label>姓名</label>
+          <input type="text" id="displayName" placeholder="你的名字" oninput="updatePreview()">
+        </div>
+        <div class="form-group">
+          <label>職稱</label>
+          <input type="text" id="title" placeholder="工程師、設計師..." oninput="updatePreview()">
+        </div>
+        <div class="form-group">
+          <label>公司</label>
+          <input type="text" id="company" placeholder="公司名稱" oninput="updatePreview()">
+        </div>
+        <div class="form-group">
+          <label>座右銘</label>
+          <input type="text" id="motto" placeholder="一句話介紹自己" oninput="updatePreview()">
+        </div>
+      </div>
+      
+      <!-- 聯絡資訊 -->
+      <div class="section">
+        <h3>📞 聯絡資訊</h3>
+        <div id="contactFields"></div>
+        <div class="add-buttons">
+          <button class="add-btn" onclick="addContact('phone')">+ 電話</button>
+          <button class="add-btn" onclick="addContact('email')">+ Email</button>
+          <button class="add-btn" onclick="addContact('line')">+ LINE</button>
+          <button class="add-btn" onclick="addContact('website')">+ 網站</button>
+          <button class="add-btn" onclick="addContact('address')">+ 地址</button>
+        </div>
+      </div>
+      
+      <!-- 按鈕 -->
+      <div class="section">
+        <h3>🔘 按鈕</h3>
+        <div id="buttonFields"></div>
+        <button class="btn btn-primary" onclick="addButton()">+ 新增按鈕</button>
+      </div>
+      
+      <!-- JSON 輸出 -->
+      <div class="json-output">
+        <h3>📄 LINE Flex Message JSON</h3>
+        <textarea id="jsonOutput" readonly></textarea>
+      </div>
+    </div>
+    
+    <!-- 預覽 -->
+    <div class="preview">
+      <h3 class="preview-title">👁️ 預覽</h3>
+      <div id="cardPreview"></div>
+    </div>
+  </div>
+
+  <script>
+    // 資料
+    let cardData = {
+      avatarUrl: '',
+      displayName: '',
+      title: '',
+      company: '',
+      motto: '',
+      contacts: [],
+      buttons: []
+    };
+    
+    // 新增聯絡資訊
+    function addContact(type) {
+      const labels = { phone: '電話', email: 'Email', line: 'LINE', website: '網站', address: '地址' };
+      const id = Date.now();
+      cardData.contacts.push({ id, type, label: labels[type], value: '' });
+      renderContactFields();
+      updatePreview();
+    }
+    
+    // 移除聯絡資訊
+    function removeContact(id) {
+      cardData.contacts = cardData.contacts.filter(c => c.id !== id);
+      renderContactFields();
+      updatePreview();
+    }
+    
+    // 渲染聯絡資訊表單
+    function renderContactFields() {
+      const container = document.getElementById('contactFields');
+      container.innerHTML = cardData.contacts.map(c => `
+        <div class="item-card">
+          <button class="remove-btn" onclick="removeContact(${c.id})">✕</button>
+          <div class="form-group">
+            <label>${c.label}</label>
+            <input type="text" placeholder="請輸入${c.label}" value="${c.value}" oninput="updateContact(${c.id}, this.value)">
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // 更新聯絡資訊
+    function updateContact(id, value) {
+      const contact = cardData.contacts.find(c => c.id === id);
+      if (contact) contact.value = value;
+      updatePreview();
+    }
+    
+    // 新增按鈕
+    function addButton() {
+      const id = Date.now();
+      cardData.buttons.push({ id, label: '按鈕文字', url: 'https://' });
+      renderButtonFields();
+      updatePreview();
+    }
+    
+    // 移除按鈕
+    function removeButton(id) {
+      cardData.buttons = cardData.buttons.filter(b => b.id !== id);
+      renderButtonFields();
+      updatePreview();
+    }
+    
+    // 渲染按鈕表單
+    function renderButtonFields() {
+      const container = document.getElementById('buttonFields');
+      container.innerHTML = cardData.buttons.map(b => `
+        <div class="item-card">
+          <button class="remove-btn" onclick="removeButton(${b.id})">✕</button>
+          <div class="form-group">
+            <label>按鈕文字</label>
+            <input type="text" placeholder="按鈕名稱" value="${b.label}" oninput="updateButton(${b.id}, 'label', this.value)">
+          </div>
+          <div class="form-group">
+            <label>連結網址</label>
+            <input type="text" placeholder="https://..." value="${b.url}" oninput="updateButton(${b.id}, 'url', this.value)">
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // 更新按鈕
+    function updateButton(id, field, value) {
+      const button = cardData.buttons.find(b => b.id === id);
+      if (button) button[field] = value;
+      updatePreview();
+    }
+    
+    // 更新預覽
+    function updatePreview() {
+      // 更新資料
+      cardData.avatarUrl = document.getElementById('avatarUrl').value;
+      cardData.displayName = document.getElementById('displayName').value;
+      cardData.title = document.getElementById('title').value;
+      cardData.company = document.getElementById('company').value;
+      cardData.motto = document.getElementById('motto').value;
+      
+      // 渲染預覽
+      const preview = document.getElementById('cardPreview');
+      const avatarHtml = cardData.avatarUrl 
+        ? `<img src="${cardData.avatarUrl}" alt="avatar">` 
+        : `<div style="width:100px;height:100px;background:#ddd;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;">👤</div>`;
+      
+      const nameHtml = cardData.displayName || '姓名';
+      const titleHtml = cardData.title ? `<div class="title">${cardData.title}</div>` : '';
+      const mottoHtml = cardData.motto ? `<div class="motto">${cardData.motto}</div>` : '';
+      
+      // 聯絡資訊
+      let infoHtml = '';
+      for (const c of cardData.contacts) {
+        if (c.value) {
+          let icon = { phone: '📞', email: '📧', line: '💬', website: '🌐', address: '📍' }[c.type];
+          infoHtml += `<div class="info-row"><span class="info-label">${icon} ${c.label}</span><span class="info-value">${c.value}</span></div>`;
+        }
+      }
+      
+      // 按鈕
+      let buttonsHtml = '';
+      for (const b of cardData.buttons) {
+        if (b.label && b.url) {
+          buttonsHtml += `<a href="${b.url}" class="line-card-btn line-card-btn-primary">${b.label}</a>`;
+        }
+      }
+      
+      preview.innerHTML = `
+        <div class="line-card">
+          ${mottoHtml ? `<div class="line-card-header">${mottoHtml}</div>` : ''}
+          <div class="line-card-hero">
+            ${avatarHtml}
+            <div class="name">${nameHtml}</div>
+            ${titleHtml}
+          </div>
+          ${infoHtml ? `<div class="line-card-body">${infoHtml}</div>` : ''}
+          ${buttonsHtml ? `<div class="line-card-buttons">${buttonsHtml}</div>` : ''}
+        </div>
+      `;
+      
+      // 生成 JSON
+      generateJSON();
+    }
+    
+    // 生成 LINE Flex Message JSON
+    function generateJSON() {
+      const flex = {
+        type: "bubble",
+        header: cardData.motto ? {
+          type: "box",
+          layout: "vertical",
+          contents: [{
+            type: "text",
+            text: cardData.motto,
+            color: "#ffffff",
+            weight: "bold"
+          }],
+          backgroundColor: "#667eea",
+          paddingAll: "xl"
+        } : null,
+        hero: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            cardData.avatarUrl ? {
+              type: "image",
+              url: cardData.avatarUrl,
+              size: "full",
+              aspectMode: "cover",
+              aspectRatio: "320:213"
+            } : null,
+            {
+              type: "box",
+              layout: "vertical",
+              contents: [
+                { type: "text", text: cardData.displayName || "姓名", weight: "bold", size: "xl", align: "center" },
+                cardData.title ? { type: "text", text: cardData.title, color: "#667eea", size: "sm", align: "center" } : null
+              ].filter(Boolean),
+              paddingAll: "md"
+            }
+          ].filter(Boolean)
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          contents: cardData.contacts.filter(c => c.value).map(c => ({
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: c.label, color: "#999999", size: "sm", width: "60px" },
+              { type: "text", text: c.value, color: "#333333", size: "sm", wrap: true }
+            ],
+            paddingTop: "sm",
+            paddingBottom: "sm"
+          }))
+        },
+        footer: cardData.buttons.filter(b => b.label && b.url).length > 0 ? {
+          type: "box",
+          layout: "vertical",
+          contents: cardData.buttons.filter(b => b.label && b.url).map(b => ({
+            type: "button",
+            style: "primary",
+            action: { type: "uri", label: b.label, uri: b.url }
+          }))
+        } : null
+      };
+      
+      // 移除空值
+      if (!flex.header) delete flex.header;
+      if (!flex.footer) delete flex.footer;
+      
+      document.getElementById('jsonOutput').value = JSON.stringify(flex, null, 2);
+    }
+    
+    // 初始化
+    updatePreview();
+  </script>
+</body>
+</html>
