@@ -67,7 +67,8 @@ function requireAdmin(req, res, next) {
   const auth = req.headers.authorization;
   if (auth) {
     const path = Buffer.from(auth.split(' ')[1], 'base64').toString();
-    if (path === '/' + ADMIN_PATH) {
+    // 支援兩種格式：直接的路徑 或 /路徑
+    if (path === ADMIN_PATH || path === '/' + ADMIN_PATH) {
       return next();
     }
   }
