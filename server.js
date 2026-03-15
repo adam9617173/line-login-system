@@ -94,9 +94,11 @@ app.get('/callback', async (req, res) => {
     const userCard = cards.find(c => c.lineId === userId);
 
     if (userCard) {
-      res.send('<h1>' + displayName + '</h1><p>' + (userCard.title || '') + '</p><p>' + (userCard.company || '') + '</p>');
+      // 有名片 → 重新導向名片編輯器
+      res.send('<html><head><meta charset="UTF-8"><title>登入成功</title><script>window.location.href="/card-editor";</script></head><body><p>登入成功，跳轉中...</p></body></html>');
     } else {
-      res.send('<h1>建立名片</h1><form><input id="t" placeholder="職稱"><input id="c" placeholder="公司"><button type="submit">建立</button></form><script>document.querySelector("form").onsubmit=function(e){e.preventDefault();fetch("/api/cards",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({lineId:"' + userId + '",title:document.getElementById("t").value,company:document.getElementById("c").value})});location.reload();}</script>');
+      // 沒有名片 → 導向名片編輯器讓他建立
+      res.send('<html><head><meta charset="UTF-8"><title>建立名片</title><script>window.location.href="/card-editor";</script></head><body><p>即將跳轉到名片編輯器...</p></body></html>');
     }
   } catch (err) {
     res.send('登入失敗');
