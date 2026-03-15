@@ -127,6 +127,14 @@
       <div class="json-output">
         <h3>📄 LINE Flex Message JSON</h3>
         <textarea id="jsonOutput" readonly></textarea>
+        <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="copyJson()">📋 複製 JSON</button>
+          <button class="btn btn-secondary" onclick="saveCard()">💾 儲存名片</button>
+          <button class="btn btn-secondary" onclick="shareToLine()">📱 分享給 LINE 好友</button>
+        </div>
+        <p style="margin-top: 10px; font-size: 0.85rem; color: #666;">
+          💡 複製 JSON 後，可發送給 LINE 機器人获取您的名片
+        </p>
       </div>
     </div>
     
@@ -351,6 +359,41 @@
     
     // 初始化
     updatePreview();
+    
+    // 複製 JSON
+    function copyJson() {
+      const json = document.getElementById('jsonOutput').value;
+      navigator.clipboard.writeText(json).then(function() {
+        alert('✅ JSON 已複製到剪貼簿！');
+      }, function() {
+        alert('複製失敗，請手動複製');
+      });
+    }
+    
+    // 儲存名片
+    function saveCard() {
+      const json = document.getElementById('jsonOutput').value;
+      fetch('/api/cards/save-flex', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ flexJson: json })
+      }).then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.success) {
+            alert('✅ 名片已儲存！');
+          } else {
+            alert('❌ 儲存失敗');
+          }
+        });
+    }
+    
+    // 分享給 LINE
+    function shareToLine() {
+      const json = document.getElementById('jsonOutput').value;
+      // 使用 LINE 的分享 URL
+      const lineShareUrl = 'https://line.me/R/msg/text/?' + encodeURIComponent('這是我的 LINE 名片：\n\n' + json);
+      window.open(lineShareUrl, '_blank');
+    }
   </script>
 </body>
 </html>

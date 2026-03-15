@@ -186,5 +186,16 @@ app.post('/api/cards/delete', (req, res) => {
   res.json({ success: true });
 });
 
+// 儲存 Flex JSON 名片
+app.post('/api/cards/save-flex', (req, res) => {
+  const { flexJson } = req.body;
+  // 從 referer 取得 lineId，或需要登入
+  // 這裡先簡化，儲存到一個共享位置
+  const fs = require('fs');
+  const flexFile = path.join(__dirname, 'latest-flex.json');
+  fs.writeFileSync(flexFile, flexJson);
+  res.json({ success: true });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Server running on port ' + PORT));
