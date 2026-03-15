@@ -16,8 +16,8 @@ const CALLBACK_URL = process.env.CALLBACK_URL || 'https://line-login-system.zeab
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'haomao123';
 
-// 產生 64 位隨機路徑
-const ADMIN_PATH = process.env.ADMIN_PATH || 'admin-' + Math.random().toString(36).substring(2, 34).padEnd(32, '0').substring(0, 64);
+// 固定的管理員路徑（可從環境變數設定，預設是這串）
+const ADMIN_PATH = process.env.ADMIN_PATH || 'haomao-admin-secure-2026-xyz789abc123def456ghi789jkl012mno345pqr';
 
 const DB_FILE = path.join(__dirname, 'users.json');
 const CARDS_FILE = path.join(__dirname, 'cards.json');
