@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LINE 名片編輯器</title>
+  <script src="https://cdn.jsdelivr.net/npm/@line/liff@2/dist/liff.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
@@ -130,10 +131,10 @@
         <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
           <button class="btn btn-primary" onclick="copyJson()">📋 複製 JSON</button>
           <button class="btn btn-secondary" onclick="saveCard()">💾 儲存名片</button>
-          <button class="btn btn-secondary" onclick="shareToLine()">📱 分享給 LINE 好友</button>
+          <button class="btn btn-primary" onclick="shareToLine()">📱 分享給 LINE 好友</button>
         </div>
         <p style="margin-top: 10px; font-size: 0.85rem; color: #666;">
-          💡 複製 JSON 後，可發送給 LINE 機器人获取您的名片
+          💡 點擊「分享給 LINE 好友」會開啟 LINE 選擇好友畫面
         </p>
       </div>
     </div>
@@ -360,6 +361,15 @@
     // 初始化
     updatePreview();
     
+    // 嘗試初始化 LIFF（在 LINE 環境下）
+    if (window.liff) {
+      liff.init({ liffId: '2008927075-RmILZFtb' }).then(function() {
+        console.log('LIFF 初始化成功');
+      }).catch(function(err) {
+        console.log('非 LINE 環境或 LIFF 初始化失敗:', err);
+      });
+    }
+    
     // 複製 JSON
     function copyJson() {
       const json = document.getElementById('jsonOutput').value;
@@ -387,12 +397,38 @@
         });
     }
     
-    // 分享給 LINE
-    function shareToLine() {
-      const json = document.getElementById('jsonOutput').value;
-      // 使用 LINE 的分享 URL
-      const lineShareUrl = 'https://line.me/R/msg/text/?' + encodeURIComponent('這是我的 LINE 名片：\n\n' + json);
-      window.open(lineShareUrl, '_blank');
+    // 分享給 LINE 好友 - 使用 liff.shareTargetPicker
+    async function shareToLine() {
+      // 檢查是否在 LINE 環境
+      if (!window.liff) {
+        alert('請在 LINE 內開啟此頁面才能使用分享功能');
+        return;
+      }
+      
+      try {
+        // 初始化 LIFF（如果還沒初始化）
+        await liff.init({ liffId: '2008927075-RmILZFtb' });
+        
+        // 準備 Flex Message
+        const flexJson = JSON.parse(document.getElementById('jsonOutput').value);
+        const flexMessage = {
+          type: 'flex',
+          altText: '我的名片',
+          contents: flexJson
+        };
+        
+        // 使用 shareTargetPicker 讓用戶選擇好友
+        const success = await liff.shareTargetPicker([flexMessage]);
+        
+        if (success) {
+          alert('✅ 已發送給選擇的好友！');
+        } else {
+          alert('用戶取消了分享');
+        }
+      } catch (error) {
+        console.error(error);
+        alert('分享失敗: ' + error.message);
+      }
     }
   </script>
 </body>
