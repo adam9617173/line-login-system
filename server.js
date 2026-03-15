@@ -41,9 +41,9 @@ function saveCards(cards) {
   fs.writeFileSync(CARDS_FILE, JSON.stringify(cards, null, 2));
 }
 
-// 首頁
+// 首頁 - 直接跳轉到名片編輯器（LIFF 會處理登入）
 app.get('/', (req, res) => {
-  res.send('<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>浩茂AI - LINE 登入</title><style>* { margin: 0; padding: 0; box-sizing: border-box; }body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #302b63 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; }.container { background: white; padding: 2rem; border-radius: 16px; text-align: center; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }.logo { font-size: 3rem; margin-bottom: 1rem; }h1 { color: #1a1a2e; margin-bottom: 0.5rem; }p { color: #666; margin-bottom: 1.5rem; }.line-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 1rem; background: #06C755; color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-decoration: none; }</style></head><body><div class="container"><div class="logo">👾</div><h1>浩茂AI</h1><p>用 LINE 帳號登入</p><a href="https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=' + LINE_CHANNEL_ID + '&redirect_uri=' + encodeURIComponent(CALLBACK_URL) + '&scope=openid%20profile&state=' + uuidv4() + '" class="line-btn">LINE 登入</a></div></body></html>');
+  res.redirect('/card-editor');
 });
 
 // 管理員登入頁面

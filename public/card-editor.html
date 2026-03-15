@@ -4,14 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LINE 名片編輯器</title>
-  <script src="https://cdn.jsdelivr.net/npm/@line/liff@2/dist/liff.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
     
     .header { background: linear-gradient(135deg, #06C755, #00B337); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
     .header h1 { font-size: 1.5rem; }
-    .header a { color: white; text-decoration: none; }
     
     .container { display: flex; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; }
     
@@ -19,11 +17,10 @@
     .preview { width: 400px; background: #e5e5e5; border-radius: 12px; padding: 20px; position: sticky; top: 20px; }
     
     .section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-    .section h3 { margin-bottom: 15px; color: #333; display: flex; justify-content: space-between; align-items: center; }
+    .section h3 { margin-bottom: 15px; color: #333; }
     
     .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
     .btn-primary { background: #06C755; color: white; }
-    .btn-danger { background: #ff4757; color: white; }
     .btn-secondary { background: #667eea; color: white; }
     
     .form-group { margin-bottom: 12px; }
@@ -36,7 +33,6 @@
     
     .preview-title { text-align: center; margin-bottom: 15px; color: #333; }
     
-    /* LINE Card Preview Style */
     .line-card { background: white; border-radius: 18px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
     .line-card-header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px; }
     .line-card-header .motto { font-size: 0.85rem; opacity: 0.9; }
@@ -48,52 +44,54 @@
     
     .line-card-body { padding: 15px; }
     .line-card-body .info-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
-    .line-card-body .info-row:last-child { border-bottom: none; }
     .line-card-body .info-label { color: #999; font-size: 0.8rem; width: 60px; }
     .line-card-body .info-value { color: #333; font-size: 0.9rem; }
     
     .line-card-buttons { padding: 10px 15px; }
     .line-card-btn { display: block; width: 100%; padding: 12px; margin-bottom: 8px; text-align: center; border-radius: 8px; text-decoration: none; font-size: 0.9rem; }
-    .line-card-btn:last-child { margin-bottom: 0; }
     .line-card-btn-primary { background: linear-gradient(135deg, #06C755, #00B337); color: white; }
-    .line-card-btn-secondary { background: #f0f0f0; color: #333; }
     
     .add-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
     .add-btn { padding: 8px 12px; background: #f0f0f0; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
     .add-btn:hover { background: #e0e0e0; }
     
     .json-output { margin-top: 20px; }
-    .json-output textarea { width: 100%; height: 200px; font-family: monospace; font-size: 0.8rem; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+    .json-output textarea { width: 100%; height: 150px; font-family: monospace; font-size: 0.8rem; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
     
-    .login-required { text-align: center; padding: 40px; }
-    .login-required h2 { color: #333; margin-bottom: 20px; }
-    .login-required p { color: #666; margin-bottom: 20px; }
+    /* 登入狀態 */
+    .status-bar { padding: 10px 20px; text-align: center; }
+    .status-logged-in { background: #e8f5e9; color: #2e7d32; }
+    .status-logged-out { background: #fff3e0; color: #e65100; }
+    .status-error { background: #ffebee; color: #c62828; }
+    
+    /* 載入畫面 */
+    .loading-screen { text-align: center; padding: 60px 20px; }
+    .loading-screen h2 { color: #333; margin-bottom: 15px; }
+    .loading-screen p { color: #666; margin-bottom: 20px; }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>📇 LINE 名片編輯器</h1>
-    <a href="/">回首頁</a>
   </div>
   
-  <!-- 登入狀態顯示 -->
-  <div id="userInfo" style="background: #e8f5e9; padding: 10px 20px; text-align: center; color: #2e7d32;"></div>
+  <!-- 狀態列 -->
+  <div id="statusBar" class="status-bar">初始化中...</div>
   
-  <div class="container" id="mainContainer">
-    <!-- 載入中 -->
-    <div class="login-required" id="loading">
-      <h2>⏳ 載入中...</h2>
-      <p>正在初始化 LINE 登入狀態</p>
+  <div class="container">
+    <!-- 載入/登入畫面 -->
+    <div class="loading-screen" id="loadingScreen">
+      <h2>⏳ 正在初始化...</h2>
+      <p>請稍候</p>
     </div>
     
-    <!-- 編輯器（預設隱藏） -->
+    <!-- 編輯器 -->
     <div class="editor" id="editorPanel" style="display: none;">
-      <!-- 基本資料 -->
       <div class="section">
         <h3>👤 基本資料</h3>
         <div class="form-group">
-          <label>大頭照</label>
-          <input type="text" id="avatarUrl" placeholder="輸入圖片網址" oninput="updatePreview()">
+          <label>大頭照網址</label>
+          <input type="text" id="avatarUrl" placeholder="https://..." oninput="updatePreview()">
         </div>
         <div class="form-group">
           <label>姓名</label>
@@ -101,7 +99,7 @@
         </div>
         <div class="form-group">
           <label>職稱</label>
-          <input type="text" id="title" placeholder="工程師、設計師..." oninput="updatePreview()">
+          <input type="text" id="title" placeholder="工程師" oninput="updatePreview()">
         </div>
         <div class="form-group">
           <label>公司</label>
@@ -113,7 +111,6 @@
         </div>
       </div>
       
-      <!-- 聯絡資訊 -->
       <div class="section">
         <h3>📞 聯絡資訊</h3>
         <div id="contactFields"></div>
@@ -122,29 +119,22 @@
           <button class="add-btn" onclick="addContact('email')">+ Email</button>
           <button class="add-btn" onclick="addContact('line')">+ LINE</button>
           <button class="add-btn" onclick="addContact('website')">+ 網站</button>
-          <button class="add-btn" onclick="addContact('address')">+ 地址</button>
         </div>
       </div>
       
-      <!-- 按鈕 -->
       <div class="section">
         <h3>🔘 按鈕</h3>
         <div id="buttonFields"></div>
         <button class="btn btn-primary" onclick="addButton()">+ 新增按鈕</button>
       </div>
       
-      <!-- JSON 輸出 -->
       <div class="json-output">
-        <h3>📄 LINE Flex Message JSON</h3>
+        <h3>📄 Flex Message JSON</h3>
         <textarea id="jsonOutput" readonly></textarea>
-        <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-          <button class="btn btn-primary" onclick="copyJson()">📋 複製 JSON</button>
-          <button class="btn btn-secondary" onclick="saveCard()">💾 儲存名片</button>
+        <div style="margin-top: 10px; display: flex; gap: 10px;">
+          <button class="btn btn-secondary" onclick="copyJson()">📋 複製</button>
           <button class="btn btn-primary" onclick="shareToLine()">📱 分享給 LINE 好友</button>
         </div>
-        <p style="margin-top: 10px; font-size: 0.85rem; color: #666;">
-          💡 點擊「分享給 LINE 好友」會開啟 LINE 選擇好友畫面
-        </p>
       </div>
     </div>
     
@@ -155,86 +145,89 @@
     </div>
   </div>
 
+  <!-- LIFF SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@line/liff@2/dist/liff.min.js"></script>
+  
   <script>
-    // 全域變數
+    // ========== 設定 ==========
+    const LIFF_ID = '2008927075-RmILZFtb';
     let currentUserId = null;
     let currentProfile = null;
     
-    // LIFF ID
-    const LIFF_ID = '2008927075-RmILZFtb';
-    
     // ========== LIFF 初始化流程 ==========
-    async function initLiff() {
+    window.onload = async function() {
+      const statusBar = document.getElementById('statusBar');
+      const loadingScreen = document.getElementById('loadingScreen');
+      const editorPanel = document.getElementById('editorPanel');
+      const previewPanel = document.getElementById('previewPanel');
+      
       try {
-        // 初始化 LIFF
-        await liff.init({ liffId: LIFF_ID });
-        console.log('LIFF 初始化成功');
+        // 1. 初始化 LIFF
+        statusBar.textContent = '🔄 正在初始化 LINE SDK...';
+        statusBar.className = 'status-bar';
         
-        // 判斷是否在 LINE 內
+        await liff.init({ liffId: LIFF_ID });
+        console.log('✅ LIFF 初始化成功');
+        
+        // 2. 檢查是否在 LINE 內
         if (!liff.isInClient()) {
-          // 不在 LINE 內，顯示提示
-          document.getElementById('userInfo').innerHTML = '⚠️ 請在 LINE 內開啟此頁面以使用完整功能';
+          statusBar.innerHTML = '⚠️ 建議在 LINE 內開啟以使用完整功能';
+          statusBar.className = 'status-bar status-logged-out';
         }
         
-        // 檢查登入狀態
+        // 3. 檢查登入狀態
         if (liff.isLoggedIn()) {
-          // 已登入，取得用戶資料
-          const profile = await liff.getProfile();
-          currentUserId = profile.userId;
-          currentProfile = profile;
+          statusBar.textContent = '✅ 已登入，正在取得用戶資料...';
           
-          // 顯示用戶資訊
-          document.getElementById('userInfo').innerHTML = '✅ 已登入：' + (profile.displayName || '用戶');
+          // 4. 取得用戶資料
+          currentProfile = await liff.getProfile();
+          currentUserId = currentProfile.userId;
           
-          // 顯示編輯器
-          showEditor();
+          statusBar.innerHTML = `✅ 歡迎，${currentProfile.displayName || '用戶'}！`;
+          statusBar.className = 'status-bar status-logged-in';
+          
+          // 5. 顯示編輯器
+          loadingScreen.style.display = 'none';
+          editorPanel.style.display = 'block';
+          previewPanel.style.display = 'block';
+          
+          // 6. 載入已儲存的名片
+          await loadSavedCard();
+          
+          // 7. 初始化預覽
+          updatePreview();
+          
         } else {
-          // 未登入，顯示登入按鈕
-          showLoginButton();
+          // 未登入，執行登入
+          statusBar.textContent = '🔐 請先登入 LINE...';
+          statusBar.className = 'status-bar status-logged-out';
+          
+          loadingScreen.innerHTML = `
+            <h2>🔐 需要登入</h2>
+            <p>請使用 LINE 帳號登入</p>
+            <button class="btn btn-primary" onclick="doLogin()" style="font-size: 1.1rem; padding: 12px 30px;">LINE 登入</button>
+          `;
         }
         
       } catch (error) {
-        console.error('LIFF 初始化失敗:', error);
-        document.getElementById('loading').innerHTML = `
-          <h2>❌ 無法初始化 LINE</h2>
+        console.error('❌ LIFF 初始化失敗:', error);
+        statusBar.textContent = '❌ 初始化失敗: ' + error.message;
+        statusBar.className = 'status-bar status-error';
+        
+        loadingScreen.innerHTML = `
+          <h2>❌ 無法初始化</h2>
           <p>錯誤：${error.message}</p>
-          <button class="btn btn-primary" onclick="tryLogin()">請先登入 LINE</button>
+          <p style="font-size: 0.85rem; color: #999;">請確認：<br>1. LIFF ID 是否正確<br>2. 網址是否在 LINE 內開啟</p>
         `;
       }
-    }
+    };
     
-    // 顯示登入按鈕
-    function showLoginButton() {
-      document.getElementById('loading').innerHTML = `
-        <div class="login-required">
-          <h2>🔐 需要登入</h2>
-          <p>請先使用 LINE 登入</p>
-          <button class="btn btn-primary" onclick="tryLogin()">LINE 登入</button>
-        </div>
-      `;
-    }
-    
-    // 嘗試登入
-    function tryLogin() {
+    // 執行登入
+    function doLogin() {
       liff.login();
     }
     
-    // 顯示編輯器
-    function showEditor() {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('editorPanel').style.display = 'block';
-      document.getElementById('previewPanel').style.display = 'block';
-      
-      // 如果有儲存的名片，載入
-      loadSavedCard();
-      
-      // 初始化預覽
-      updatePreview();
-    }
-    
-    // ========== 名片功能 ==========
-    
-    // 資料
+    // ========== 名片編輯功能 ==========
     let cardData = {
       avatarUrl: '',
       displayName: '',
@@ -245,9 +238,8 @@
       buttons: []
     };
     
-    // 新增聯絡資訊
     function addContact(type) {
-      const labels = { phone: '電話', email: 'Email', line: 'LINE', website: '網站', address: '地址' };
+      const labels = { phone: '電話', email: 'Email', line: 'LINE', website: '網站' };
       const id = Date.now();
       cardData.contacts.push({ id, type, label: labels[type], value: '' });
       renderContactFields();
@@ -267,7 +259,7 @@
           <button class="remove-btn" onclick="removeContact(${c.id})">✕</button>
           <div class="form-group">
             <label>${c.label}</label>
-            <input type="text" placeholder="請輸入${c.label}" value="${c.value}" oninput="updateContact(${c.id}, this.value)">
+            <input type="text" placeholder="請輸入" value="${c.value}" oninput="updateContact(${c.id}, this.value)">
           </div>
         </div>
       `).join('');
@@ -279,7 +271,6 @@
       updatePreview();
     }
     
-    // 新增按鈕
     function addButton() {
       const id = Date.now();
       cardData.buttons.push({ id, label: '按鈕文字', url: 'https://' });
@@ -300,11 +291,11 @@
           <button class="remove-btn" onclick="removeButton(${b.id})">✕</button>
           <div class="form-group">
             <label>按鈕文字</label>
-            <input type="text" placeholder="按鈕名稱" value="${b.label}" oninput="updateButton(${b.id}, 'label', this.value)">
+            <input type="text" value="${b.label}" oninput="updateButton(${b.id}, 'label', this.value)">
           </div>
           <div class="form-group">
             <label>連結網址</label>
-            <input type="text" placeholder="https://..." value="${b.url}" oninput="updateButton(${b.id}, 'url', this.value)">
+            <input type="text" value="${b.url}" oninput="updateButton(${b.id}, 'url', this.value)">
           </div>
         </div>
       `).join('');
@@ -316,7 +307,7 @@
       updatePreview();
     }
     
-    // 更新預覽
+    // ========== 預覽與 JSON ==========
     function updatePreview() {
       cardData.avatarUrl = document.getElementById('avatarUrl').value;
       cardData.displayName = document.getElementById('displayName').value;
@@ -329,60 +320,51 @@
         ? `<img src="${cardData.avatarUrl}" alt="avatar">` 
         : `<div style="width:100px;height:100px;background:#ddd;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;">👤</div>`;
       
-      const nameHtml = cardData.displayName || '姓名';
-      const titleHtml = cardData.title ? `<div class="title">${cardData.title}</div>` : '';
-      const mottoHtml = cardData.motto ? `<div class="motto">${cardData.motto}</div>` : '';
-      
-      let infoHtml = '';
-      for (const c of cardData.contacts) {
-        if (c.value) {
-          let icon = { phone: '📞', email: '📧', line: '💬', website: '🌐', address: '📍' }[c.type];
-          infoHtml += `<div class="info-row"><span class="info-label">${icon} ${c.label}</span><span class="info-value">${c.value}</span></div>`;
-        }
-      }
-      
-      let buttonsHtml = '';
-      for (const b of cardData.buttons) {
-        if (b.label && b.url) {
-          buttonsHtml += `<a href="${b.url}" class="line-card-btn line-card-btn-primary">${b.label}</a>`;
-        }
-      }
-      
       preview.innerHTML = `
         <div class="line-card">
-          ${mottoHtml ? `<div class="line-card-header">${mottoHtml}</div>` : ''}
+          ${cardData.motto ? `<div class="line-card-header"><div class="motto">${cardData.motto}</div></div>` : ''}
           <div class="line-card-hero">
             ${avatarHtml}
-            <div class="name">${nameHtml}</div>
-            ${titleHtml}
+            <div class="name">${cardData.displayName || '姓名'}</div>
+            ${cardData.title ? `<div class="title">${cardData.title}</div>` : ''}
           </div>
-          ${infoHtml ? `<div class="line-card-body">${infoHtml}</div>` : ''}
-          ${buttonsHtml ? `<div class="line-card-buttons">${buttonsHtml}</div>` : ''}
+          ${cardData.contacts.filter(c => c.value).length > 0 ? `
+            <div class="line-card-body">
+              ${cardData.contacts.filter(c => c.value).map(c => `
+                <div class="info-row">
+                  <span class="info-label">${c.label}</span>
+                  <span class="info-value">${c.value}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+          ${cardData.buttons.filter(b => b.label && b.url).length > 0 ? `
+            <div class="line-card-buttons">
+              ${cardData.buttons.filter(b => b.label && b.url).map(b => `
+                <a href="${b.url}" class="line-card-btn line-card-btn-primary">${b.label}</a>
+              `).join('')}
+            </div>
+          ` : ''}
         </div>
       `;
       
       generateJSON();
     }
     
-    // 生成 JSON
     function generateJSON() {
       const flex = {
         type: "bubble",
         header: cardData.motto ? {
-          type: "box",
-          layout: "vertical",
+          type: "box", layout: "vertical",
           contents: [{ type: "text", text: cardData.motto, color: "#ffffff", weight: "bold" }],
-          backgroundColor: "#667eea",
-          paddingAll: "xl"
+          backgroundColor: "#667eea", paddingAll: "xl"
         } : null,
         hero: {
-          type: "box",
-          layout: "vertical",
+          type: "box", layout: "vertical",
           contents: [
             cardData.avatarUrl ? { type: "image", url: cardData.avatarUrl, size: "full", aspectMode: "cover", aspectRatio: "320:213" } : null,
             {
-              type: "box",
-              layout: "vertical",
+              type: "box", layout: "vertical",
               contents: [
                 { type: "text", text: cardData.displayName || "姓名", weight: "bold", size: "xl", align: "center" },
                 cardData.title ? { type: "text", text: cardData.title, color: "#667eea", size: "sm", align: "center" } : null
@@ -392,25 +374,20 @@
           ].filter(Boolean)
         },
         body: {
-          type: "box",
-          layout: "vertical",
+          type: "box", layout: "vertical",
           contents: cardData.contacts.filter(c => c.value).map(c => ({
-            type: "box",
-            layout: "horizontal",
+            type: "box", layout: "horizontal",
             contents: [
               { type: "text", text: c.label, color: "#999999", size: "sm", width: "60px" },
               { type: "text", text: c.value, color: "#333333", size: "sm", wrap: true }
             ],
-            paddingTop: "sm",
-            paddingBottom: "sm"
+            paddingTop: "sm", paddingBottom: "sm"
           }))
         },
         footer: cardData.buttons.filter(b => b.label && b.url).length > 0 ? {
-          type: "box",
-          layout: "vertical",
+          type: "box", layout: "vertical",
           contents: cardData.buttons.filter(b => b.label && b.url).map(b => ({
-            type: "button",
-            style: "primary",
+            type: "button", style: "primary",
             action: { type: "uri", label: b.label, uri: b.url }
           }))
         } : null
@@ -422,46 +399,16 @@
       document.getElementById('jsonOutput').value = JSON.stringify(flex, null, 2);
     }
     
-    // ========== 功能按鈕 ==========
-    
-    // 複製 JSON
+    // ========== 功能 ==========
     function copyJson() {
       const json = document.getElementById('jsonOutput').value;
       navigator.clipboard.writeText(json).then(function() {
-        alert('✅ JSON 已複製到剪貼簿！');
+        alert('✅ 已複製到剪貼簿！');
       }, function() {
-        alert('複製失敗，請手動複製');
+        alert('複製失敗');
       });
     }
     
-    // 儲存名片
-    async function saveCard() {
-      if (!currentUserId) {
-        alert('請先登入 LINE');
-        return;
-      }
-      
-      const json = document.getElementById('jsonOutput').value;
-      
-      try {
-        const res = await fetch('/api/cards/save-flex', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ lineId: currentUserId, flexJson: json })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-          alert('✅ 名片已儲存！');
-        } else {
-          alert('❌ 儲存失敗');
-        }
-      } catch (e) {
-        alert('❌ 儲存失敗: ' + e.message);
-      }
-    }
-    
-    // 分享給 LINE 好友
     async function shareToLine() {
       if (!currentUserId) {
         alert('請先登入 LINE');
@@ -474,7 +421,7 @@
       }
       
       try {
-        // 先儲存名片
+        // 先儲存
         const json = document.getElementById('jsonOutput').value;
         await fetch('/api/cards/save-flex', {
           method: 'POST',
@@ -482,7 +429,7 @@
           body: JSON.stringify({ lineId: currentUserId, flexJson: json })
         });
         
-        // 準備 Flex Message
+        // 發送
         const flexJson = JSON.parse(document.getElementById('jsonOutput').value);
         const flexMessage = {
           type: 'flex',
@@ -490,7 +437,6 @@
           contents: flexJson
         };
         
-        // 使用 shareTargetPicker
         const success = await liff.shareTargetPicker([flexMessage]);
         
         if (success) {
@@ -504,7 +450,6 @@
       }
     }
     
-    // 載入已儲存的名片
     async function loadSavedCard() {
       if (!currentUserId) return;
       
@@ -515,39 +460,26 @@
         if (cards.length > 0 && cards[0].flexJson) {
           const flex = JSON.parse(cards[0].flexJson);
           
-          // 解析並填入表單
+          // 解析到表單
           if (flex.hero && flex.hero.contents) {
             for (const c of flex.hero.contents) {
-              if (c.type === 'image' && c.url) {
-                document.getElementById('avatarUrl').value = c.url;
-              }
+              if (c.type === 'image' && c.url) document.getElementById('avatarUrl').value = c.url;
               if (c.type === 'box' && c.contents) {
                 for (const t of c.contents) {
-                  if (t.text) {
-                    document.getElementById('displayName').value = t.text;
-                  }
-                  if (t.color === '#667eea') {
-                    document.getElementById('title').value = t.text;
-                  }
+                  if (t.weight === 'bold') document.getElementById('displayName').value = t.text || '';
+                  if (t.color === '#667eea') document.getElementById('title').value = t.text || '';
                 }
               }
             }
           }
-          
           if (flex.header && flex.header.contents && flex.header.contents[0]) {
             document.getElementById('motto').value = flex.header.contents[0].text || '';
           }
-          
-          updatePreview();
         }
       } catch (e) {
-        console.log('載入儲存名片失敗:', e);
+        console.log('載入失敗:', e);
       }
     }
-    
-    // ========== 啟動 ==========
-    // 頁面載入後立即初始化 LIFF
-    window.onload = initLiff;
   </script>
 </body>
 </html>
