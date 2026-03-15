@@ -12,7 +12,7 @@ app.use(express.static('public'));
 const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2008927075';
 const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || 'e7e6ec0d47b394f5b24b1795a0d776da';
 const LIFF_ID = process.env.LIFF_ID || '2008927075-RmILZFtb';
-const CALLBACK_URL = process.env.CALLBACK_URL || 'https://your-app.zeabur.app/callback';
+const CALLBACK_URL = process.env.CALLBACK_URL || 'https://line-login-system.zeabur.app/callback';
 
 const DB_FILE = path.join(__dirname, 'users.json');
 
