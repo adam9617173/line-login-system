@@ -14,11 +14,6 @@ app.get('/card-editor', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'card-editor.html'));
 });
 
-// 潛在客戶搜尋系統
-app.get('/leads', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'leads.html'));
-});
-
 const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2008927075';
 const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || 'e7e6ec0d47b394f5b24b1795a0d776da';
 const CALLBACK_URL = process.env.CALLBACK_URL || 'https://line-login-system.zeabur.app/callback';
@@ -27,88 +22,6 @@ const ADMIN_PATH = 'awcr97del30qui0nuqrenjcsl0dfii01gnnsk8on46iydx9elpha6ne8kyyq
 
 const DB_FILE = path.join(__dirname, 'users.json');
 const CARDS_FILE = path.join(__dirname, 'cards.json');
-const LEADS_FILE = path.join(__dirname, 'leads.json');
-
-// Leads 資料庫
-function getLeads() {
-  if (!fs.existsSync(LEADS_FILE)) return [];
-  return JSON.parse(fs.readFileSync(LEADS_FILE, 'utf8'));
-}
-
-function saveLeads(leads) {
-  fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2));
-}
-
-// 搜尋講師 API
-app.post('/api/leads/search', async (req, res) => {
-  const { keyword } = req.body;
-  
-  if (!keyword) {
-    res.json({ error: '請輸入關鍵字' });
-    return;
-  }
-  
-  try {
-    const response = await axios.post('https://api.tavily.com/search', {
-      query: keyword + ' 線上課程 講師 LINE',
-      api_key: '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'
-    }, { timeout: 10000 });
-    
-    const results = response.data.results || [];
-    
-    // 解析結果
-    const leads = results.map(r => ({
-      id: uuidv4(),
-      keyword: keyword,
-      title: r.title,
-      url: r.url,
-      content: r.content?.substring(0, 200) || '',
-      source: 'Tavily',
-      status: 'new',
-      score: Math.round(r.score * 100),
-      createdAt: new Date().toISOString()
-    }));
-    
-    // 儲存到資料庫
-    const existingLeads = getLeads();
-    const updatedLeads = [...leads, ...existingLeads];
-    saveLeads(updatedLeads);
-    
-    res.json({ success: true, leads: leads });
-    
-  } catch (error) {
-    console.error('搜尋失敗:', error.message);
-    res.json({ error: '搜尋失敗: ' + error.message });
-  }
-});
-
-// 取得所有 leads
-app.get('/api/leads', (req, res) => {
-  const leads = getLeads();
-  res.json(leads);
-});
-
-// 更新 lead 狀態
-app.post('/api/leads/update', (req, res) => {
-  const { id, status, notes, score } = req.body;
-  const leads = getLeads();
-  const index = leads.findIndex(l => l.id === id);
-  
-  if (index >= 0) {
-    leads[index] = { ...leads[index], status, notes, score, updatedAt: new Date().toISOString() };
-    saveLeads(leads);
-  }
-  
-  res.json({ success: true });
-});
-
-// 刪除 lead
-app.delete('/api/leads/:id', (req, res) => {
-  const { id } = req.params;
-  const leads = getLeads().filter(l => l.id !== id);
-  saveLeads(leads);
-  res.json({ success: true });
-});
 
 function getUsers() {
   if (!fs.existsSync(DB_FILE)) return [];
@@ -128,9 +41,9 @@ function saveCards(cards) {
   fs.writeFileSync(CARDS_FILE, JSON.stringify(cards, null, 2));
 }
 
-// 首頁 - 直接跳轉到名片編輯器（LIFF 會處理登入）
+// 首頁
 app.get('/', (req, res) => {
-  res.redirect('/card-editor');
+  res.send('<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>浩茂AI - LINE 登入</title><style>* { margin: 0; padding: 0; box-sizing: border-box; }body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #302b63 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; }.container { background: white; padding: 2rem; border-radius: 16px; text-align: center; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }.logo { font-size: 3rem; margin-bottom: 1rem; }h1 { color: #1a1a2e; margin-bottom: 0.5rem; }p { color: #666; margin-bottom: 1.5rem; }.line-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 1rem; background: #06C755; color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-decoration: none; }</style></head><body><div class="container"><div class="logo">👾</div><h1>浩茂AI</h1><p>用 LINE 帳號登入</p><a href="https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=' + LINE_CHANNEL_ID + '&redirect_uri=' + encodeURIComponent(CALLBACK_URL) + '&scope=openid%20profile&state=' + uuidv4() + '" class="line-btn">LINE 登入</a></div></body></html>');
 });
 
 // 管理員登入頁面
@@ -181,11 +94,11 @@ app.get('/callback', async (req, res) => {
     const userCard = cards.find(c => c.lineId === userId);
 
     if (userCard) {
-      // 有名片 → 重新導向名片編輯器，並帶上 userId
-      res.send('<html><head><meta charset="UTF-8"><title>登入成功</title><script>window.location.href="/card-editor?userId=' + userId + '";</script></head><body><p>登入成功，跳轉中...</p></body></html>');
+      // 有名片 → 重新導向名片編輯器
+      res.send('<html><head><meta charset="UTF-8"><title>登入成功</title><script>window.location.href="/card-editor";</script></head><body><p>登入成功，跳轉中...</p></body></html>');
     } else {
-      // 沒有名片 → 導向名片編輯器讓他建立，並帶上 userId
-      res.send('<html><head><meta charset="UTF-8"><title>建立名片</title><script>window.location.href="/card-editor?userId=' + userId + '";</script></head><body><p>即將跳轉到名片編輯器...</p></body></html>');
+      // 沒有名片 → 導向名片編輯器讓他建立
+      res.send('<html><head><meta charset="UTF-8"><title>建立名片</title><script>window.location.href="/card-editor";</script></head><body><p>即將跳轉到名片編輯器...</p></body></html>');
     }
   } catch (err) {
     res.send('登入失敗');
@@ -258,15 +171,7 @@ app.post('/api/users/delete', (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/cards', (req, res) => {
-  const lineId = req.query.lineId;
-  if (lineId) {
-    const cards = getCards().filter(c => c.lineId === lineId);
-    res.json(cards);
-  } else {
-    res.json(getCards());
-  }
-});
+app.get('/api/cards', (req, res) => res.json(getCards()));
 app.post('/api/cards', (req, res) => {
   const { lineId, title, company } = req.body;
   const cards = getCards();
@@ -283,29 +188,12 @@ app.post('/api/cards/delete', (req, res) => {
 
 // 儲存 Flex JSON 名片
 app.post('/api/cards/save-flex', (req, res) => {
-  const { lineId, flexJson } = req.body;
-  
-  if (!lineId) {
-    res.json({ success: false, error: '缺少用戶 ID' });
-    return;
-  }
-  
-  const cards = getCards();
-  const index = cards.findIndex(c => c.lineId === lineId);
-  
-  const card = { 
-    lineId: lineId, 
-    flexJson: flexJson,
-    updatedAt: new Date().toISOString()
-  };
-  
-  if (index >= 0) {
-    cards[index] = { ...cards[index], ...card };
-  } else {
-    cards.push(card);
-  }
-  
-  saveCards(cards);
+  const { flexJson } = req.body;
+  // 從 referer 取得 lineId，或需要登入
+  // 這裡先簡化，儲存到一個共享位置
+  const fs = require('fs');
+  const flexFile = path.join(__dirname, 'latest-flex.json');
+  fs.writeFileSync(flexFile, flexJson);
   res.json({ success: true });
 });
 
