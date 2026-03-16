@@ -14,6 +14,11 @@ app.get('/card-editor', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'card-editor.html'));
 });
 
+// 潛在客戶搜尋系統
+app.get('/leads', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'leads.html'));
+});
+
 const LINE_CHANNEL_ID = process.env.LINE_CHANNEL_ID || '2008927075';
 const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || 'e7e6ec0d47b394f5b24b1795a0d776da';
 const CALLBACK_URL = process.env.CALLBACK_URL || 'https://line-login-system.zeabur.app/callback';
@@ -22,6 +27,88 @@ const ADMIN_PATH = 'awcr97del30qui0nuqrenjcsl0dfii01gnnsk8on46iydx9elpha6ne8kyyq
 
 const DB_FILE = path.join(__dirname, 'users.json');
 const CARDS_FILE = path.join(__dirname, 'cards.json');
+const LEADS_FILE = path.join(__dirname, 'leads.json');
+
+// Leads 資料庫
+function getLeads() {
+  if (!fs.existsSync(LEADS_FILE)) return [];
+  return JSON.parse(fs.readFileSync(LEADS_FILE, 'utf8'));
+}
+
+function saveLeads(leads) {
+  fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2));
+}
+
+// 搜尋講師 API
+app.post('/api/leads/search', async (req, res) => {
+  const { keyword } = req.body;
+  
+  if (!keyword) {
+    res.json({ error: '請輸入關鍵字' });
+    return;
+  }
+  
+  try {
+    const response = await axios.post('https://api.tavily.com/search', {
+      query: keyword + ' 線上課程 講師 LINE',
+      api_key: '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'
+    }, { timeout: 10000 });
+    
+    const results = response.data.results || [];
+    
+    // 解析結果
+    const leads = results.map(r => ({
+      id: uuidv4(),
+      keyword: keyword,
+      title: r.title,
+      url: r.url,
+      content: r.content?.substring(0, 200) || '',
+      source: 'Tavily',
+      status: 'new',
+      score: Math.round(r.score * 100),
+      createdAt: new Date().toISOString()
+    }));
+    
+    // 儲存到資料庫
+    const existingLeads = getLeads();
+    const updatedLeads = [...leads, ...existingLeads];
+    saveLeads(updatedLeads);
+    
+    res.json({ success: true, leads: leads });
+    
+  } catch (error) {
+    console.error('搜尋失敗:', error.message);
+    res.json({ error: '搜尋失敗: ' + error.message });
+  }
+});
+
+// 取得所有 leads
+app.get('/api/leads', (req, res) => {
+  const leads = getLeads();
+  res.json(leads);
+});
+
+// 更新 lead 狀態
+app.post('/api/leads/update', (req, res) => {
+  const { id, status, notes, score } = req.body;
+  const leads = getLeads();
+  const index = leads.findIndex(l => l.id === id);
+  
+  if (index >= 0) {
+    leads[index] = { ...leads[index], status, notes, score, updatedAt: new Date().toISOString() };
+    saveLeads(leads);
+  }
+  
+  res.json({ success: true });
+});
+
+// 刪除 lead
+app.delete('/api/leads/:id', (req, res) => {
+  const { id } = req.params;
+  const leads = getLeads().filter(l => l.id !== id);
+  saveLeads(leads);
+  res.json({ success: true });
+});
 
 function getUsers() {
   if (!fs.existsSync(DB_FILE)) return [];
